@@ -1,13 +1,70 @@
 import { useState, useEffect, useRef } from "react"
+import { Dispatch, SetStateAction } from 'react';
 import { Button } from 'react-bootstrap';
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
+type ScheduleData = {
+    dia: string,
+    hora_inicio: number,
+    hora_fin: number
+
+}
+type Schedule = {
+    codigo_seccion: string,
+    numero_seccion: number,
+    schedules: ScheduleData[]
+}
 
 
-export default function ScheduleTable({ courses, setCourses }) {
+type SectionData = {
+    codigo_seccion: string,
+    numero_seccion: number,
+    codigo_curso: string,
+    carrera: string,
+    schedules: ScheduleData[]
+}
 
-    const days = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"]
+type Course = {
+    courseName: string,
+    courseCode: string,
+    major: string,
+    semester: number | '',
+    data: SectionData
+};
+
+type AssignedColor = {
+    [key: string]: string;
+
+}
+
+type ScheduleCourseList = {
+    [key: string]: ScheduleCourse[]
+}
+type ScheduleCourse = {
+
+    name: string,
+    sectionNumber: number,
+    startTime: number,
+    duration: number
+
+}
+
+type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
+const days: string[] = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"]
+
+const initialscheduleCourses = () => {
+    const initialScheduleCourse: ScheduleCourseList = {}
+    days.forEach(day => {
+        initialScheduleCourse[day] = [];
+    });
+    return initialScheduleCourse
+
+}; // You can provide an initial value if needed
+
+
+export default function ScheduleTable({ courses = [], setCourses }: { courses: Course[], setCourses: SetCoursesType }) {
+
     const baseColors = [
         "#fbf8cc",
         "#fde4cf",
@@ -22,19 +79,12 @@ export default function ScheduleTable({ courses, setCourses }) {
     ]
 
     const [availableColors, setAvailableColors] = useState(baseColors)
-    const [assignedColors, setAssignedColors] = useState({})
-    const [buttonsVisible, setButtonsVisible] = useState(true);
+    const [assignedColors, setAssignedColors] = useState<AssignedColor>({})
 
     const hours = Array.from({ length: 14 }, (_, index) => index + 8);
-    const [scheduleCourses, setScheduleCourses] = useState(() => {
-        const initialScheduleFields = {};
-        days.forEach(day => {
-            initialScheduleFields[day] = [];
-
-        });
-        return initialScheduleFields;
-    });
+    const [scheduleCourses, setScheduleCourses] = useState<ScheduleCourseList>(initialscheduleCourses);
     const tableRef = useRef(null);
+
 
     const getAvailableColor = () => {
         let color = availableColors[0]
@@ -45,7 +95,7 @@ export default function ScheduleTable({ courses, setCourses }) {
         setAvailableColors(availableColors.slice(1))
         return color
     }
-    const assignColorToCourse = (courseName, courseColor) => {
+    const assignColorToCourse = (courseName: string, courseColor: string) => {
         const newAssignedColors = assignedColors
         newAssignedColors[courseName] = courseColor
         setAssignedColors(newAssignedColors)
@@ -59,7 +109,7 @@ export default function ScheduleTable({ courses, setCourses }) {
             }
             const courseColor = getAvailableColor()
             assignColorToCourse(courseName, courseColor)
-            const sectionNumber = course.data.sectionNumber
+            const sectionNumber = course.data.numero_seccion
 
             course.data.schedules.forEach(schedule => {
                 const day = schedule.dia
@@ -83,8 +133,7 @@ export default function ScheduleTable({ courses, setCourses }) {
 
 
 
-
-    const deleteCourseFromAssignedColors = (courseName) => {
+    const deleteCourseFromAssignedColors = (courseName: string) => {
         const assignedColor = assignedColors[courseName]
         const updatedAssignedColors = Object.fromEntries(
             Object.entries(assignedColors).filter(([key]) => key !== courseName)
@@ -95,10 +144,10 @@ export default function ScheduleTable({ courses, setCourses }) {
     }
 
 
-    const handleDeleteButton = (courseName) => {
+    const handleDeleteButton = (courseName: string) => {
         deleteCourseFromAssignedColors(courseName)
-        const updatedCourses = []
-        const updatedScheduleCourses = {}
+        const updatedCourses: Course[] = []
+        const updatedScheduleCourses: ScheduleCourseList = {}
         days.forEach(day => {
             updatedScheduleCourses[day] = []
             scheduleCourses[day].forEach(course => {
@@ -116,11 +165,10 @@ export default function ScheduleTable({ courses, setCourses }) {
         setCourses(updatedCourses)
         setScheduleCourses(updatedScheduleCourses)
     }
-    const createDeleteCourseButton = (courseName) => {
+    const createDeleteCourseButton = (courseName: string) => {
         return (
             <Button
                 variant="danger"
-                style={{ display: buttonsVisible ? 'block' : 'none' }}
                 onClick={() => handleDeleteButton(courseName)
                 }
             >
@@ -129,7 +177,7 @@ export default function ScheduleTable({ courses, setCourses }) {
         )
 
     }
-    const createCourseCell = (name, sectionNumber, duration, key) => {
+    const createCourseCell = (name: string, sectionNumber: number, duration: number, key: string) => {
         const cellText = `${name} G.${sectionNumber}`
         const cellBackgroundColor = assignedColors[name]
 
@@ -152,7 +200,7 @@ export default function ScheduleTable({ courses, setCourses }) {
         </td >
 
     }
-    const createEmptyCell = (key) => {
+    const createEmptyCell = (key: string) => {
         return <td key={key} style={{
             whiteSpace: 'pre-wrap',
             wordWrap: 'break-word'
@@ -161,12 +209,12 @@ export default function ScheduleTable({ courses, setCourses }) {
     }
 
 
-    const createHourCell = (hour) => {
+    const createHourCell = (hour: number) => {
         return <td className="text-center">{`${hour}:00-${hour + 1}:00`}</td>
 
     }
 
-    const createCellsTable = (hour) => {
+    const createCellsTable = (hour: number) => {
         const hourCells = []
         for (let i = 0; i < 6; i++) {
             const day = days[i]

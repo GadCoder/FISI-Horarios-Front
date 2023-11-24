@@ -1,18 +1,54 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Dispatch, SetStateAction } from 'react';
 import { Button, Modal } from 'react-bootstrap';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
-export default function CourseForm({ courses, setCourses }) {
+
+type ScheduleData = {
+  dia: string,
+  hora_inicio: number,
+  hora_fin: number
+
+}
+type Schedule = {
+  codigo_seccion: string,
+  numero_seccion: number,
+  schedules: ScheduleData[]
+}
+
+
+type SectionData = {
+  codigo_seccion: string,
+  numero_seccion: number,
+  codigo_curso: string,
+  carrera: string,
+  schedules: ScheduleData[]
+}
+
+type Course = {
+  courseName: string,
+  courseCode: string,
+  major: string,
+  semester: number | '',
+  data: SectionData
+};
+
+type SectionListDict = {
+  [key: string]: Schedule;
+}
+type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
+
+export default function CourseForm({ courses = [], setCourses }: { courses: Course[], setCourses: SetCoursesType }) {
   const [major, setMajor] = useState<string>('')
   const [semester, setSemester] = useState<number | ''>('')
   const [courseCode, SetCourseCode] = useState<string>('')
   const [courseName, setCourseName] = useState<string>('')
-  const [courseList, setCourseList] = useState([])
-  const [sectionList, setSectionList] = useState({})
+  const [courseList, setCourseList] = useState<Course[]>([]);
+  const [sectionList, setSectionList] = useState<SectionListDict>({});
   const [section, setSection] = useState<string>('')
   const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
   const [showConflictCourseModal, setShowConflictCourseModal] = useState(false)
@@ -54,7 +90,7 @@ export default function CourseForm({ courses, setCourses }) {
     }
   }, [semester]);
 
-  const getSectionSchedule = async (sectionCode, sectionNumber) => {
+  const getSectionSchedule = async (sectionCode: string) => {
     try {
       const res = await fetch(`https://generador-horarios.fly.dev/horario-seccion/get-horarios-from-seccion/${major}/${sectionCode}`);
       const result = await res.json();
@@ -64,14 +100,15 @@ export default function CourseForm({ courses, setCourses }) {
       return null;
     }
   };
-  const getSectionLabel = (sectionData) => {
+  const getSectionLabel = (sectionData: Schedule) => {
     let label = "";
-    sectionData.schedules.forEach((horario) => {
-      const textPart = `G.${sectionData.sectionNumber} ${horario.dia} ${horario.hora_inicio}:00-${horario.hora_fin}:00`;
+    sectionData.schedules.forEach((horario: ScheduleData) => {
+      const textPart = `G.${sectionData.codigo_seccion} ${horario.dia} ${horario.hora_inicio}:00-${horario.hora_fin}:00`;
       label += textPart;
     });
     return label;
   }
+
   useEffect(() => {
     // Ensure that the API call is only made if a selection has been made
     if (courseCode !== '') {
@@ -79,12 +116,13 @@ export default function CourseForm({ courses, setCourses }) {
         try {
           const res = await fetch(`https://generador-horarios.fly.dev/secciones/get-secciones-from-curso/${courseCode}`);
           const result = await res.json();
-          const sections = {}
-          await Promise.all(result.map(async section => {
-            const sectionSchedule = {}
-            const sectionData = await getSectionSchedule(section.codigo_seccion, section.numero_seccion);
-            sectionSchedule.sectionNumber = section.numero_seccion;
-            sectionSchedule.schedules = sectionData
+          const sections: SectionListDict = {}
+          await Promise.all(result.map(async (section: SectionData) => {
+            const sectionSchedule: Schedule = {
+              numero_seccion: section.numero_seccion,
+              codigo_seccion: section.codigo_seccion,
+              schedules: await getSectionSchedule(section.codigo_seccion)
+            }
             sections[section.codigo_seccion] = sectionSchedule;
           }))
           setSectionList(sections)
@@ -97,11 +135,13 @@ export default function CourseForm({ courses, setCourses }) {
       fetchData();
     }
   }, [courseCode]);
+
+
   useEffect(() => {
     if (courseList.length > 0) {
-      const firstCourseOnList = courseList[0]
-      SetCourseCode(firstCourseOnList.codigo_curso);
-      setCourseName(firstCourseOnList.nombre_curso)
+      const firstCourseOnList: Course = courseList[0]
+      SetCourseCode(firstCourseOnList.courseCode);
+      setCourseName(firstCourseOnList.courseName)
     }
 
   }, [courseList])
@@ -116,11 +156,11 @@ export default function CourseForm({ courses, setCourses }) {
   }, [sectionList])
 
 
-  const compareCourseHours = (courseSelected, startTime, endTime, day) => {
+  const compareCourseHours = (courseSelected: Course, startTime: number, endTime: number, day: string) => {
     let conflictInHours = false
 
     for (let courseHour = startTime; courseHour < endTime; courseHour++) {
-      courseSelected.data.schedules.forEach((selectedSchedule) => {
+      courseSelected.data.schedules.forEach((selectedSchedule: ScheduleData) => {
         const selectedCourseday = selectedSchedule.dia;
         const selectedCourseStartTime = selectedSchedule.hora_inicio;
         const selectedCourseEndTime = selectedSchedule.hora_fin;
@@ -137,9 +177,9 @@ export default function CourseForm({ courses, setCourses }) {
     return conflictInHours
 
   }
-  const checkScheduleConflicts = (courseSelected, course) => {
+  const checkScheduleConflicts = (courseSelected: Course, course: Course) => {
     let areScheduleConflicts = false
-    course.data.schedules.forEach((schedule) => {
+    course.data.schedules.forEach((schedule: ScheduleData) => {
       const day = schedule.dia;
       const startTime = schedule.hora_inicio;
       const endTime = schedule.hora_fin;
@@ -171,12 +211,19 @@ export default function CourseForm({ courses, setCourses }) {
       return;
     }
 
-    const courseSelected = {
+    const courseData: SectionData = {
+      codigo_curso: courseCode,
+      numero_seccion: sectionList[section].numero_seccion,
+      codigo_seccion: sectionList[section].codigo_seccion,
+      carrera: major,
+      schedules: sectionList[section].schedules
+    }
+    const courseSelected: Course = {
       courseName: courseName,
       courseCode: courseCode,
       major: major,
       semester: semester,
-      data: sectionList[section],
+      data: courseData,
     };
     let areScheduleConflicts = false;
     courses.forEach((course) => {
@@ -241,9 +288,9 @@ export default function CourseForm({ courses, setCourses }) {
                 setCourseName(label);
               }}>
               <option value="" disabled >Selecciona un curso</option>
-              {courseList.map((course) => (
-                <option key={course.id} value={course.codigo_curso}>
-                  {course.nombre_curso}
+              {courseList.map((course: Course, index: number) => (
+                <option key={index} value={course.courseCode}>
+                  {course.courseName}
                 </option>
               ))}
             </select>
@@ -257,7 +304,7 @@ export default function CourseForm({ courses, setCourses }) {
               }}>
               <option value="" disabled>Selecciona una seccion</option>
               {Object.entries(sectionList)
-                .sort(([, a], [, b]) => a.sectionNumber - b.sectionNumber)
+                .sort(([, a], [, b]) => a.numero_seccion - b.numero_seccion)
                 .map(([sectionKey, sectionData]) => (
                   <option key={sectionKey} value={sectionKey}>
                     {getSectionLabel(sectionData)}
