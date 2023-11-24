@@ -226,10 +226,8 @@ export default function ScheduleTable({ courses = [], setCourses }: { courses: C
                     hourCells.push(courseCell)
                     courseAssigned = true
                 } else {
-                    console.log("Hour: " + hour)
                     for (let j = hour; j >= hour - 5; j--) {
                         if (course.startTime == j && !courseAssigned && hour < course.startTime + course.duration) {
-                            console.log("Deleting td")
                             skipCell = true
 
                         }
@@ -237,7 +235,6 @@ export default function ScheduleTable({ courses = [], setCourses }: { courses: C
                 }
             })
             if (!courseAssigned) {
-                console.log("Number of td: " + hourCells.length)
                 const emptyCell = createEmptyCell(hour + day)
                 if (!skipCell)
                     hourCells.push(emptyCell)

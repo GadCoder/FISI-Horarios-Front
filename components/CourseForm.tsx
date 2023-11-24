@@ -29,12 +29,14 @@ type SectionData = {
   schedules: ScheduleData[]
 }
 
+
 type Course = {
-  courseName: string,
-  courseCode: string,
-  major: string,
-  semester: number | '',
-  data: SectionData
+  carrera: string,
+  ciclo: number | '',
+  codigo_curso: string,
+  id: number,
+  nombre_curso: string,
+  creditaje: number,
 };
 
 type SectionListDict = {
@@ -45,9 +47,9 @@ type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
 export default function CourseForm({ courses = [], setCourses }: { courses: Course[], setCourses: SetCoursesType }) {
   const [major, setMajor] = useState<string>('')
   const [semester, setSemester] = useState<number | ''>('')
-  const [courseCode, SetCourseCode] = useState<string>('')
-  const [courseName, setCourseName] = useState<string>('')
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
   const [courseList, setCourseList] = useState<Course[]>([]);
+  const [selectedCourseSections, setSelectedCourseSections] = useState<SectionData | null>(null)
   const [sectionList, setSectionList] = useState<SectionListDict>({});
   const [section, setSection] = useState<string>('')
   const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
@@ -80,6 +82,7 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
         try {
           const res = await fetch(`https://generador-horarios.fly.dev/cursos/get-from-ciclo/${major}/${semester}`);
           const result = await res.json();
+          setSelectedCourse(result[0])
           setCourseList(result)
         } catch (error) {
           console.error('Error fetching data:', error);
@@ -89,6 +92,50 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       fetchData();
     }
   }, [semester]);
+
+  useEffect(() => {
+    // Ensure that the API call is only made if a selection has been made
+    const fetchData = async () => {
+      try {
+        const res = await fetch(`https://generador-horarios.fly.dev/secciones/get-secciones-from-curso/${selectedCourse?.codigo_curso}`);
+        const result = await res.json();
+        setSelectedCourseSections(result[0])
+        const sections: SectionListDict = {}
+        await Promise.all(result.map(async (section: SectionData) => {
+          const sectionSchedule: Schedule = {
+            numero_seccion: section.numero_seccion,
+            codigo_seccion: section.codigo_seccion,
+            schedules: await getSectionSchedule(section.codigo_seccion)
+          }
+          sections[section.codigo_seccion] = sectionSchedule;
+        }))
+        setSectionList(sections)
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      };
+
+    }
+
+    fetchData();
+  }, [selectedCourse]);
+
+  useEffect(() => {
+    if (courseList.length > 0) {
+      const firstCourseOnList: Course = courseList[0]
+      setSelectedCourse(firstCourseOnList)
+    }
+
+  }, [courseList])
+
+  useEffect(() => {
+    const sectionListValues = Object.entries(sectionList)
+    if (sectionListValues.length > 0) {
+      const [firstKey, firstValue] = sectionListValues[0];
+      setSection(firstKey)
+    }
+
+  }, [sectionList])
+
 
   const getSectionSchedule = async (sectionCode: string) => {
     try {
@@ -109,58 +156,14 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
     return label;
   }
 
-  useEffect(() => {
-    // Ensure that the API call is only made if a selection has been made
-    if (courseCode !== '') {
-      const fetchData = async () => {
-        try {
-          const res = await fetch(`https://generador-horarios.fly.dev/secciones/get-secciones-from-curso/${courseCode}`);
-          const result = await res.json();
-          const sections: SectionListDict = {}
-          await Promise.all(result.map(async (section: SectionData) => {
-            const sectionSchedule: Schedule = {
-              numero_seccion: section.numero_seccion,
-              codigo_seccion: section.codigo_seccion,
-              schedules: await getSectionSchedule(section.codigo_seccion)
-            }
-            sections[section.codigo_seccion] = sectionSchedule;
-          }))
-          setSectionList(sections)
-        } catch (error) {
-          console.error('Error fetching data:', error);
-        };
 
-      }
-
-      fetchData();
-    }
-  }, [courseCode]);
-
-
-  useEffect(() => {
-    if (courseList.length > 0) {
-      const firstCourseOnList: Course = courseList[0]
-      SetCourseCode(firstCourseOnList.courseCode);
-      setCourseName(firstCourseOnList.courseName)
-    }
-
-  }, [courseList])
-
-  useEffect(() => {
-    const sectionListValues = Object.entries(sectionList)
-    if (sectionListValues.length > 0) {
-      const [firstKey, firstValue] = sectionListValues[0];
-      setSection(firstKey)
-    }
-
-  }, [sectionList])
-
-
-  const compareCourseHours = (courseSelected: Course, startTime: number, endTime: number, day: string) => {
+  const compareCourseHours = (startTime: number, endTime: number, day: string) => {
     let conflictInHours = false
+    if (!selectedCourseSections)
+      return false
 
     for (let courseHour = startTime; courseHour < endTime; courseHour++) {
-      courseSelected.data.schedules.forEach((selectedSchedule: ScheduleData) => {
+      selectedCourseSections.schedules.forEach((selectedSchedule: ScheduleData) => {
         const selectedCourseday = selectedSchedule.dia;
         const selectedCourseStartTime = selectedSchedule.hora_inicio;
         const selectedCourseEndTime = selectedSchedule.hora_fin;
@@ -177,15 +180,18 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
     return conflictInHours
 
   }
+
   const checkScheduleConflicts = (courseSelected: Course, course: Course) => {
     let areScheduleConflicts = false
-    course.data.schedules.forEach((schedule: ScheduleData) => {
+    if (!selectedCourseSections)
+      return false
+    selectedCourseSections.schedules.forEach((schedule: ScheduleData) => {
       const day = schedule.dia;
       const startTime = schedule.hora_inicio;
       const endTime = schedule.hora_fin;
-      if (compareCourseHours(courseSelected, startTime, endTime, day)) {
+      if (compareCourseHours(startTime, endTime, day)) {
         areScheduleConflicts = true
-        setConflictedCourse(course.courseName)
+        setConflictedCourse(course.nombre_curso)
       }
 
     });
@@ -195,8 +201,8 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
   const isCourseAlreadyAggregated = () => {
     let courseAlreadyAggregated = false
     courses.forEach(courseInList => {
-      const courseInListCode = courseInList.courseCode;
-      if (courseInListCode == courseCode)
+      const courseInListCode = courseInList.codigo_curso;
+      if (courseInListCode == selectedCourse?.codigo_curso)
         courseAlreadyAggregated = true
     })
     return courseAlreadyAggregated
@@ -211,23 +217,10 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       return;
     }
 
-    const courseData: SectionData = {
-      codigo_curso: courseCode,
-      numero_seccion: sectionList[section].numero_seccion,
-      codigo_seccion: sectionList[section].codigo_seccion,
-      carrera: major,
-      schedules: sectionList[section].schedules
-    }
-    const courseSelected: Course = {
-      courseName: courseName,
-      courseCode: courseCode,
-      major: major,
-      semester: semester,
-      data: courseData,
-    };
+
     let areScheduleConflicts = false;
     courses.forEach((course) => {
-      areScheduleConflicts = checkScheduleConflicts(courseSelected, course)
+      areScheduleConflicts = checkScheduleConflicts(course, course)
     });
 
     if (areScheduleConflicts) {
@@ -235,7 +228,9 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       return
     }
     if (!areScheduleConflicts) {
-      setCourses((prevItems) => [...prevItems, courseSelected]);
+      if (selectedCourse) {
+        setCourses((prevItems) => [...prevItems, selectedCourse]);
+      }
     }
   };
 
@@ -289,8 +284,8 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
               }}>
               <option value="" disabled >Selecciona un curso</option>
               {courseList.map((course: Course, index: number) => (
-                <option key={index} value={course.courseCode}>
-                  {course.courseName}
+                <option key={index} value={course.codigo_curso}>
+                  {course.nombre_curso}
                 </option>
               ))}
             </select>
