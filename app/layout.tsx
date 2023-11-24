@@ -1,6 +1,14 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
+import 'bootstrap/dist/css/bootstrap.css';
+
+import dynamic from 'next/dynamic';
+
+const DynamicBootstrap = dynamic(
+  () => require('bootstrap/dist/js/bootstrap.min.js'),
+  { ssr: false }
+);
 
 const inter = Inter({ subsets: ['latin'] })
 
