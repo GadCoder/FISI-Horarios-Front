@@ -4,16 +4,13 @@ import { Button } from 'react-bootstrap';
 
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
+
+
 type ScheduleData = {
     dia: string,
     hora_inicio: number,
     hora_fin: number
 
-}
-type Schedule = {
-    codigo_seccion: string,
-    numero_seccion: number,
-    schedules: ScheduleData[]
 }
 
 
@@ -25,12 +22,15 @@ type SectionData = {
     schedules: ScheduleData[]
 }
 
+
 type Course = {
-    courseName: string,
-    courseCode: string,
-    major: string,
-    semester: number | '',
-    data: SectionData
+    carrera: string,
+    ciclo: number | '',
+    codigo_curso: string,
+    id: number,
+    nombre_curso: string,
+    creditaje: number,
+    data: SectionData | null
 };
 
 type AssignedColor = {
@@ -63,7 +63,7 @@ const initialscheduleCourses = () => {
 }; // You can provide an initial value if needed
 
 
-export default function ScheduleTable({ courses = [], setCourses }: { courses: Course[], setCourses: SetCoursesType }) {
+export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { addedCourses: Course[], setAddedCourses: SetCoursesType }) {
 
     const baseColors = [
         "#fbf8cc",
@@ -95,6 +95,7 @@ export default function ScheduleTable({ courses = [], setCourses }: { courses: C
         setAvailableColors(availableColors.slice(1))
         return color
     }
+
     const assignColorToCourse = (courseName: string, courseColor: string) => {
         const newAssignedColors = assignedColors
         newAssignedColors[courseName] = courseColor
@@ -102,33 +103,37 @@ export default function ScheduleTable({ courses = [], setCourses }: { courses: C
     }
 
     useEffect(() => {
-        courses.forEach(course => {
-            const courseName = course.courseName
+        addedCourses.forEach(course => {
+            const courseName = course.nombre_curso
             if ((courseName in assignedColors)) {
                 return
             }
+
             const courseColor = getAvailableColor()
             assignColorToCourse(courseName, courseColor)
-            const sectionNumber = course.data.numero_seccion
+            if (course && course.data) {
+                const sectionNumber = course.data.numero_seccion
 
-            course.data.schedules.forEach(schedule => {
-                const day = schedule.dia
-                const startTime = schedule.hora_inicio
-                const endTime = schedule.hora_fin
-                const duration = endTime - startTime
+                course.data.schedules.forEach(schedule => {
+                    const day = schedule.dia
+                    const startTime = schedule.hora_inicio
+                    const endTime = schedule.hora_fin
+                    const duration = endTime - startTime
 
-                scheduleCourses[day].push({
-                    'name': courseName,
-                    'sectionNumber': sectionNumber,
-                    'startTime': startTime,
-                    'duration': duration
+                    scheduleCourses[day].push({
+                        name: courseName,
+                        sectionNumber: sectionNumber,
+                        startTime: startTime,
+                        duration: duration
+
+                    })
 
                 })
+            }
 
-            })
         })
 
-    }, [courses])
+    }, [addedCourses])
 
 
 
@@ -156,13 +161,13 @@ export default function ScheduleTable({ courses = [], setCourses }: { courses: C
                 }
             })
         })
-        courses.forEach(course => {
-            if (course.courseName != courseName) {
+        addedCourses.forEach(course => {
+            if (course.nombre_curso != courseName) {
                 updatedCourses.push(course)
             }
         })
 
-        setCourses(updatedCourses)
+        setAddedCourses(updatedCourses)
         setScheduleCourses(updatedScheduleCourses)
     }
     const createDeleteCourseButton = (courseName: string) => {

@@ -7,6 +7,7 @@ import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
+import { getCoursesFromSemester, getSectionsFromCourse, getSchedulesFromSection } from "../app/api"
 
 type ScheduleData = {
   dia: string,
@@ -37,6 +38,7 @@ type Course = {
   id: number,
   nombre_curso: string,
   creditaje: number,
+  data: SectionData | null
 };
 
 type SectionListDict = {
@@ -44,14 +46,15 @@ type SectionListDict = {
 }
 type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
 
-export default function CourseForm({ courses = [], setCourses }: { courses: Course[], setCourses: SetCoursesType }) {
-  const [major, setMajor] = useState<string>('')
-  const [semester, setSemester] = useState<number | ''>('')
+export default function CourseForm({ addedCourses = [], setAddedCourses }: { addedCourses: Course[], setAddedCourses: SetCoursesType }) {
+  const [selectedMajor, setSelectedMajor] = useState<string>('')
+  const [selectedSemester, setSelectedSemester] = useState<number | ''>('')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [schedulesOfSelectedCourse, setSchedulesOfSelectedCourse] = useState<SectionData>()
   const [courseList, setCourseList] = useState<Course[]>([]);
   const [selectedCourseSections, setSelectedCourseSections] = useState<SectionData | null>(null)
+  const [selectedSection, setSelectedSection] = useState<string>('')
   const [sectionList, setSectionList] = useState<SectionListDict>({});
-  const [section, setSection] = useState<string>('')
   const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
   const [showConflictCourseModal, setShowConflictCourseModal] = useState(false)
   const [conflictedCourse, setConflictedCourse] = useState('')
@@ -71,51 +74,44 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
   };
 
   useEffect(() => {
-    setCourses([])
+    setAddedCourses([])
     setCourseList([])
-    setSemester('')
-  }, [major])
+    setSelectedSemester('')
+  }, [selectedMajor])
 
   useEffect(() => {
-    if (semester !== '') {
+    if (selectedSemester != '') {
       const fetchData = async () => {
-        try {
-          const res = await fetch(`https://generador-horarios.fly.dev/cursos/get-from-ciclo/${major}/${semester}`);
-          const result = await res.json();
-          setSelectedCourse(result[0])
-          setCourseList(result)
-        } catch (error) {
-          console.error('Error fetching data:', error);
+        const coursesFromSemester = await getCoursesFromSemester(selectedMajor, selectedSemester)
+        if (coursesFromSemester != null) {
+          setSelectedCourse(coursesFromSemester[0])
+          setCourseList(coursesFromSemester)
         }
       };
 
       fetchData();
     }
-  }, [semester]);
+  }, [selectedSemester]);
 
   useEffect(() => {
-    // Ensure that the API call is only made if a selection has been made
+    if (selectedCourse == null) {
+      return
+    }
     const fetchData = async () => {
-      try {
-        const res = await fetch(`https://generador-horarios.fly.dev/secciones/get-secciones-from-curso/${selectedCourse?.codigo_curso}`);
-        const result = await res.json();
-        setSelectedCourseSections(result[0])
-        const sections: SectionListDict = {}
-        await Promise.all(result.map(async (section: SectionData) => {
-          const sectionSchedule: Schedule = {
-            numero_seccion: section.numero_seccion,
-            codigo_seccion: section.codigo_seccion,
-            schedules: await getSectionSchedule(section.codigo_seccion)
-          }
-          sections[section.codigo_seccion] = sectionSchedule;
-        }))
-        setSectionList(sections)
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      };
+
+      const sectionsFromCourse = await getSectionsFromCourse(selectedCourse?.codigo_curso)
+      const sections: SectionListDict = {}
+      await Promise.all(sectionsFromCourse.map(async (section: SectionData) => {
+        const sectionSchedule: Schedule = {
+          numero_seccion: section.numero_seccion,
+          codigo_seccion: section.codigo_seccion,
+          schedules: await getSectionSchedule(section.codigo_seccion)
+        }
+        sections[section.codigo_seccion] = sectionSchedule;
+      }))
+      setSectionList(sections)
 
     }
-
     fetchData();
   }, [selectedCourse]);
 
@@ -131,26 +127,44 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
     const sectionListValues = Object.entries(sectionList)
     if (sectionListValues.length > 0) {
       const [firstKey, firstValue] = sectionListValues[0];
-      setSection(firstKey)
+      setSelectedSection(firstKey)
+      getSchedulesForSelectedCourse(firstKey)
     }
 
   }, [sectionList])
 
+  const getInfoFromSelectedCourse = (courseCode: string) => {
+    courseList.forEach(course => {
+      if (course.codigo_curso == courseCode) {
+        setSelectedCourse(course)
+      }
+    })
+  }
+
+  const getSchedulesForSelectedCourse = (selectedSectionCode: string) => {
+    if (!selectedCourse)
+      return null
+    const schedules = sectionList[selectedSectionCode]
+    const scheduleData: SectionData = {
+      codigo_seccion: schedules.codigo_seccion,
+      numero_seccion: schedules.numero_seccion,
+      codigo_curso: selectedCourse.codigo_curso,
+      carrera: selectedMajor,
+      schedules: schedules.schedules
+    }
+    setSchedulesOfSelectedCourse(scheduleData)
+    return scheduleData
+  }
 
   const getSectionSchedule = async (sectionCode: string) => {
-    try {
-      const res = await fetch(`https://generador-horarios.fly.dev/horario-seccion/get-horarios-from-seccion/${major}/${sectionCode}`);
-      const result = await res.json();
-      return result.horarios
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      return null;
-    }
+    const schedulesFromSection = await getSchedulesFromSection(selectedMajor, sectionCode)
+    return schedulesFromSection
+
   };
   const getSectionLabel = (sectionData: Schedule) => {
     let label = "";
     sectionData.schedules.forEach((horario: ScheduleData) => {
-      const textPart = `G.${sectionData.codigo_seccion} ${horario.dia} ${horario.hora_inicio}:00-${horario.hora_fin}:00`;
+      const textPart = `G.${sectionData.numero_seccion} ${horario.dia} ${horario.hora_inicio}:00-${horario.hora_fin}:00`;
       label += textPart;
     });
     return label;
@@ -181,9 +195,9 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
 
   }
 
-  const checkScheduleConflicts = (courseSelected: Course, course: Course) => {
+  const checkScheduleConflicts = (courseToAdd: Course) => {
     let areScheduleConflicts = false
-    if (!selectedCourseSections)
+    if (selectedCourseSections == null)
       return false
     selectedCourseSections.schedules.forEach((schedule: ScheduleData) => {
       const day = schedule.dia;
@@ -191,7 +205,7 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       const endTime = schedule.hora_fin;
       if (compareCourseHours(startTime, endTime, day)) {
         areScheduleConflicts = true
-        setConflictedCourse(course.nombre_curso)
+        setConflictedCourse(courseToAdd.nombre_curso)
       }
 
     });
@@ -200,7 +214,7 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
 
   const isCourseAlreadyAggregated = () => {
     let courseAlreadyAggregated = false
-    courses.forEach(courseInList => {
+    addedCourses.forEach(courseInList => {
       const courseInListCode = courseInList.codigo_curso;
       if (courseInListCode == selectedCourse?.codigo_curso)
         courseAlreadyAggregated = true
@@ -209,7 +223,7 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
   }
 
   const handleAddButton = () => {
-    if (section == '') {
+    if (selectedSection == '') {
       return;
     }
     if (isCourseAlreadyAggregated()) {
@@ -217,10 +231,9 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       return;
     }
 
-
     let areScheduleConflicts = false;
-    courses.forEach((course) => {
-      areScheduleConflicts = checkScheduleConflicts(course, course)
+    addedCourses.forEach((course) => {
+      areScheduleConflicts = checkScheduleConflicts(course)
     });
 
     if (areScheduleConflicts) {
@@ -228,8 +241,11 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
       return
     }
     if (!areScheduleConflicts) {
-      if (selectedCourse) {
-        setCourses((prevItems) => [...prevItems, selectedCourse]);
+      if (selectedCourse && selectedSection) {
+        selectedCourse.data = getSchedulesForSelectedCourse(selectedSection)
+        console.log("Adding course: ")
+        console.log(selectedCourse)
+        setAddedCourses((prevItems) => [...prevItems, selectedCourse]);
       }
     }
   };
@@ -242,10 +258,10 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
         <Row className="mb-3">
           <Col sm={12} md={3}>
             <label htmlFor="carrera" className="form-label">Carrera</label>
-            <select name="carrera" id="carrera" className="form-select" value={major}
+            <select name="carrera" id="carrera" className="form-select" value={selectedMajor}
               onChange={(event) => {
                 const value = event.target.value;
-                setMajor(value);
+                setSelectedMajor(value);
               }}>
               <option value="" disabled>
                 Selecciona una carrera
@@ -260,17 +276,16 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
               name="ciclo"
               id="ciclo"
               className="form-select"
-              value={semester}
+              value={selectedSemester}
               onChange={(event) => {
                 const value = parseInt(event.target.value, 10);
-                setSemester(value);
+                setSelectedSemester(value);
               }}
             >
               <option value="" disabled>
                 Selecciona un ciclo
               </option>
               {renderSemesterOptions()}
-
             </select>
           </Col>
           <Col sm={12} md={3}>
@@ -278,16 +293,16 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
             <select name="curso" id="curso" className="form-select"
               onChange={(event) => {
                 const value = event.target.value;
-                const label = event.target.options[event.target.selectedIndex].text;
-                SetCourseCode(value);
-                setCourseName(label);
+                getInfoFromSelectedCourse(value)
               }}>
               <option value="" disabled >Selecciona un curso</option>
-              {courseList.map((course: Course, index: number) => (
-                <option key={index} value={course.codigo_curso}>
-                  {course.nombre_curso}
-                </option>
-              ))}
+              {courseList && Array.isArray(courseList) && (
+                courseList.map((course: Course, index: number) => (
+                  <option key={index} value={course.codigo_curso}>
+                    {course.nombre_curso}
+                  </option>
+                ))
+              )}
             </select>
           </Col>
           <Col sm={12} md={3}>
@@ -295,7 +310,8 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
             <select name="seccion" id="seccion" className="form-select"
               onChange={(event) => {
                 const value = event.target.value;
-                setSection(value)
+                getSchedulesForSelectedCourse(value)
+                setSelectedSection(value)
               }}>
               <option value="" disabled>Selecciona una seccion</option>
               {Object.entries(sectionList)
@@ -310,19 +326,15 @@ export default function CourseForm({ courses = [], setCourses }: { courses: Cour
           </Col>
         </Row>
       </form>
-
       <Row className="mb-3 mt-4 d-flex justify-content-center ">
         <Button
           variant="primary"
           onClick={handleAddButton}
           style={{ width: "30%" }}
-
         >
           Agregar curso
         </Button>
-
       </Row>
-
       <Modal show={showAddedCourseModal} onHide={() => setShowAddedCourseModal(false)} >
         <Modal.Header closeButton>
           <Modal.Title>Error :(</Modal.Title>

@@ -3,16 +3,13 @@ import { useState, useEffect } from "react"
 import CourseForm from '@/components/CourseForm'
 import ScheduleTable from '@/components/ScheduleTable'
 
+
+
 type ScheduleData = {
   dia: string,
   hora_inicio: number,
   hora_fin: number
 
-}
-type Schedule = {
-  codigo_seccion: string,
-  numero_seccion: number,
-  schedules: ScheduleData[]
 }
 
 
@@ -24,21 +21,24 @@ type SectionData = {
   schedules: ScheduleData[]
 }
 
-type Course = {
-  courseName: string,
-  courseCode: string,
-  major: string,
-  semester: number | '',
-  data: SectionData
-};
 
+type Course = {
+  carrera: string,
+  ciclo: number | '',
+  codigo_curso: string,
+  id: number,
+  nombre_curso: string,
+  creditaje: number,
+  data: SectionData | null
+};
 
 const initialCourses: Course[] = []; // You can provide an initial value if needed
 
 export default function Home() {
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [addedCourses, setAddedCourses] = useState<Course[]>(initialCourses);
   useEffect(() => {
-  }, [courses])
+    console.log(addedCourses)
+  }, [addedCourses])
 
   return (
     <div className="container">
@@ -46,10 +46,10 @@ export default function Home() {
         <h1>FISI - Generador de horarios</h1>
       </div>
       <div className='row'>
-        <CourseForm courses={courses} setCourses={setCourses} />
+        <CourseForm addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
       </div>
       <div className='row'>
-        <ScheduleTable courses={courses} setCourses={setCourses} />
+        <ScheduleTable addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
       </div>
     </div >
   )
