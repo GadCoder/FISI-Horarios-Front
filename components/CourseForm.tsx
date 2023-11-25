@@ -50,9 +50,8 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
   const [selectedMajor, setSelectedMajor] = useState<string>('')
   const [selectedSemester, setSelectedSemester] = useState<number | ''>('')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
-  const [schedulesOfSelectedCourse, setSchedulesOfSelectedCourse] = useState<SectionData>()
+  const [schedulesOfSelectedCourse, setSchedulesOfSelectedCourse] = useState<SectionData | null>(null)
   const [courseList, setCourseList] = useState<Course[]>([]);
-  const [selectedCourseSections, setSelectedCourseSections] = useState<SectionData | null>(null)
   const [selectedSection, setSelectedSection] = useState<string>('')
   const [sectionList, setSectionList] = useState<SectionListDict>({});
   const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
@@ -133,6 +132,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
 
   }, [sectionList])
 
+
   const getInfoFromSelectedCourse = (courseCode: string) => {
     courseList.forEach(course => {
       if (course.codigo_curso == courseCode) {
@@ -171,46 +171,6 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
   }
 
 
-  const compareCourseHours = (startTime: number, endTime: number, day: string) => {
-    let conflictInHours = false
-    if (!selectedCourseSections)
-      return false
-
-    for (let courseHour = startTime; courseHour < endTime; courseHour++) {
-      selectedCourseSections.schedules.forEach((selectedSchedule: ScheduleData) => {
-        const selectedCourseday = selectedSchedule.dia;
-        const selectedCourseStartTime = selectedSchedule.hora_inicio;
-        const selectedCourseEndTime = selectedSchedule.hora_fin;
-        const coursesAreOnSameDay = day === selectedCourseday
-        if (coursesAreOnSameDay) {
-          const courseHourInConflict = courseHour >= selectedCourseStartTime &&
-            courseHour <= selectedCourseEndTime
-          if (courseHourInConflict) {
-            conflictInHours = true
-          }
-        }
-      });
-    }
-    return conflictInHours
-
-  }
-
-  const checkScheduleConflicts = (courseToAdd: Course) => {
-    let areScheduleConflicts = false
-    if (selectedCourseSections == null)
-      return false
-    selectedCourseSections.schedules.forEach((schedule: ScheduleData) => {
-      const day = schedule.dia;
-      const startTime = schedule.hora_inicio;
-      const endTime = schedule.hora_fin;
-      if (compareCourseHours(startTime, endTime, day)) {
-        areScheduleConflicts = true
-        setConflictedCourse(courseToAdd.nombre_curso)
-      }
-
-    });
-    return areScheduleConflicts
-  }
 
   const isCourseAlreadyAggregated = () => {
     let courseAlreadyAggregated = false
@@ -222,31 +182,58 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
     return courseAlreadyAggregated
   }
 
+  const areConflictBetweenSchedules = (existingCourseSchedule: ScheduleData, selectedCourseSchedule: ScheduleData) => {
+    if (existingCourseSchedule.dia != selectedCourseSchedule.dia)
+      return false
+    for (let i = existingCourseSchedule.hora_fin; i <= existingCourseSchedule.hora_inicio; i++) {
+      const selectedCourseStartTime = selectedCourseSchedule.hora_fin
+      const selectedCourseEndTime = selectedCourseSchedule.hora_inicio
+      if (i >= selectedCourseStartTime && i <= selectedCourseEndTime)
+        return false
+    }
+    return true
+
+  }
+
+  const checkConflictBetweenCourses = (existingCourse: Course, selectedCourse: Course) => {
+    const existingCourseSchedules = existingCourse.data?.schedules
+    const selectedCourseSchedules = selectedCourse.data?.schedules
+
+    let conflictExists = false
+    existingCourseSchedules?.forEach(existingCourseSchedule => {
+      selectedCourseSchedules?.forEach(selectedCourseSchedule => {
+        conflictExists = areConflictBetweenSchedules(existingCourseSchedule, selectedCourseSchedule)
+      })
+    })
+    return conflictExists
+  }
   const handleAddButton = () => {
     if (selectedSection == '') {
       return;
+    }
+    if (selectedCourse == null) {
+      return
     }
     if (isCourseAlreadyAggregated()) {
       setShowAddedCourseModal(true)
       return;
     }
-
+    const schedulesForSelectedCourse = getSchedulesForSelectedCourse(selectedSection)
+    selectedCourse.data = schedulesOfSelectedCourse
+    if (schedulesForSelectedCourse == null)
+      return
     let areScheduleConflicts = false;
-    addedCourses.forEach((course) => {
-      areScheduleConflicts = checkScheduleConflicts(course)
+    addedCourses.forEach((existingCourse) => {
+      areScheduleConflicts = checkConflictBetweenCourses(existingCourse, selectedCourse)
+      if (areScheduleConflicts) {
+        setConflictedCourse(existingCourse.nombre_curso)
+        setShowConflictCourseModal(true)
+        return
+      }
     });
 
-    if (areScheduleConflicts) {
-      setShowConflictCourseModal(true)
-      return
-    }
     if (!areScheduleConflicts) {
-      if (selectedCourse && selectedSection) {
-        selectedCourse.data = getSchedulesForSelectedCourse(selectedSection)
-        console.log("Adding course: ")
-        console.log(selectedCourse)
-        setAddedCourses((prevItems) => [...prevItems, selectedCourse]);
-      }
+      setAddedCourses((prevItems) => [...prevItems, selectedCourse]);
     }
   };
 

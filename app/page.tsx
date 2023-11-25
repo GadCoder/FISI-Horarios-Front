@@ -36,9 +36,6 @@ const initialCourses: Course[] = []; // You can provide an initial value if need
 
 export default function Home() {
   const [addedCourses, setAddedCourses] = useState<Course[]>(initialCourses);
-  useEffect(() => {
-    console.log(addedCourses)
-  }, [addedCourses])
 
   return (
     <div className="container">
