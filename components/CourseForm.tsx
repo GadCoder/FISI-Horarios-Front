@@ -6,6 +6,7 @@ import { Button, Modal } from 'react-bootstrap';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Spinner from 'react-bootstrap/Spinner';
 
 import { getCoursesFromSemester, getSectionsFromCourse, getSchedulesFromSection } from "../app/api"
 
@@ -45,8 +46,9 @@ type SectionListDict = {
   [key: string]: Schedule;
 }
 type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
+type setToastType = Dispatch<SetStateAction<boolean>>
 
-export default function CourseForm({ addedCourses = [], setAddedCourses }: { addedCourses: Course[], setAddedCourses: SetCoursesType }) {
+export default function CourseForm({ addedCourses = [], setAddedCourses, setShowCourseAddedToast }: { addedCourses: Course[], setAddedCourses: SetCoursesType, setShowCourseAddedToast: setToastType },) {
   const [selectedMajor, setSelectedMajor] = useState<string>('')
   const [selectedSemester, setSelectedSemester] = useState<number | ''>('')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -54,37 +56,33 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
   const [courseList, setCourseList] = useState<Course[]>([]);
   const [selectedSection, setSelectedSection] = useState<string>('')
   const [sectionList, setSectionList] = useState<SectionListDict>({});
-  const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
-  const [showConflictCourseModal, setShowConflictCourseModal] = useState(false)
   const [conflictedCourse, setConflictedCourse] = useState('')
 
 
-  const renderSemesterOptions = () => {
-    const options = [];
-    const numberOfSemesters = 10;
-    for (let i = 1; i <= numberOfSemesters; i++) {
-      options.push(
-        <option key={i} value={i}>
-          {i}
-        </option>
-      );
-    }
-    return options;
-  };
+  const [showAddedCourseModal, setShowAddedCourseModal] = useState(false);
+  const [showConflictCourseModal, setShowConflictCourseModal] = useState(false)
+  const [courseOptionsLoading, setCourseOptionsLoading] = useState(false)
+  const [sectionOptionsLoading, setSectionOptionsLoading] = useState(false)
+
+
 
   useEffect(() => {
     setAddedCourses([])
+    setSelectedCourse(null)
     setCourseList([])
     setSelectedSemester('')
+    setSelectedSection('')
   }, [selectedMajor])
 
   useEffect(() => {
     if (selectedSemester != '') {
+      setCourseOptionsLoading(true)
       const fetchData = async () => {
         const coursesFromSemester = await getCoursesFromSemester(selectedMajor, selectedSemester)
         if (coursesFromSemester != null) {
           setSelectedCourse(coursesFromSemester[0])
           setCourseList(coursesFromSemester)
+          setCourseOptionsLoading(false)
         }
       };
 
@@ -96,6 +94,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
     if (selectedCourse == null) {
       return
     }
+    setSectionOptionsLoading(true)
     const fetchData = async () => {
 
       const sectionsFromCourse = await getSectionsFromCourse(selectedCourse?.codigo_curso)
@@ -107,6 +106,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
           schedules: await getSectionSchedule(section.codigo_seccion)
         }
         sections[section.codigo_seccion] = sectionSchedule;
+        setSectionOptionsLoading(false)
       }))
       setSectionList(sections)
 
@@ -116,8 +116,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
 
   useEffect(() => {
     if (courseList.length > 0) {
-      const firstCourseOnList: Course = courseList[0]
-      setSelectedCourse(firstCourseOnList)
+      setSelectedCourse(null)
     }
 
   }, [courseList])
@@ -125,10 +124,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
   useEffect(() => {
     const sectionListValues = Object.entries(sectionList)
     if (sectionListValues.length > 0) {
-      const [firstKey, firstValue] = sectionListValues[0];
-      console.log("First key: " + firstKey)
-      setSelectedSection(firstKey)
-      getSchedulesForSelectedCourse(firstKey)
+      setSelectedSection('')
     }
 
   }, [sectionList])
@@ -244,11 +240,57 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
     });
 
     if (!areScheduleConflicts) {
+      setShowCourseAddedToast(true)
       setAddedCourses((prevItems) => [...prevItems, selectedCourse]);
     }
   };
+  const renderSemesterOptions = () => {
+    const options = [];
+    const numberOfSemesters = 10;
+    for (let i = 1; i <= numberOfSemesters; i++) {
+      options.push(
+        <option key={i} value={i}>
+          {i}
+        </option>
+      );
+    }
+    return options;
+  };
 
 
+  const renderCourseOptions = () => {
+    const options = [];
+    options.push(<option value="" key="default" disabled >Selecciona un curso</option>)
+    if (courseList.length > 0) {
+      courseList.map((course: Course, index: number) => (
+        options.push(
+          <option key={index} value={course.codigo_curso}>
+            {course.nombre_curso}
+          </option>
+        )
+      ))
+    }
+
+    return options
+  }
+
+  const renderSectionOptions = () => {
+    const options = [];
+    options.push(<option value="" disabled defaultChecked>Selecciona una sección</option>)
+    {
+      Object.entries(sectionList)
+        .sort(([, a], [, b]) => a.numero_seccion - b.numero_seccion)
+        .map(([sectionKey, sectionData]) => (
+          options.push(
+            <option key={sectionKey} value={sectionKey}>
+              {getSectionLabel(sectionData)}
+            </option>
+          )
+        ))
+    }
+    return options
+
+  }
 
   return (
     <Container>
@@ -261,7 +303,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
                 const value = event.target.value;
                 setSelectedMajor(value);
               }}>
-              <option value="" disabled>
+              <option value="" disabled defaultChecked>
                 Selecciona una carrera
               </option>
               <option value="SOFTWARE">Ingeniería de Software</option>
@@ -280,46 +322,55 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
                 setSelectedSemester(value);
               }}
             >
-              <option value="" disabled>
+              <option value="" disabled defaultChecked>
                 Selecciona un ciclo
               </option>
               {renderSemesterOptions()}
             </select>
           </Col>
           <Col sm={12} md={3}>
-            <label htmlFor="curso" className="form-label">Curso</label>
-            <select name="curso" id="curso" className="form-select"
+            <label htmlFor="curso" className="form-label me-3">Curso</label>
+            {courseOptionsLoading ? (
+              <Spinner animation="border" role="status" size="sm">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+
+            ) : ('')
+            }
+            <select
+              name="curso"
+              id="curso"
+              className="form-select"
+              value={selectedCourse?.codigo_curso || ''}
               onChange={(event) => {
                 const value = event.target.value;
                 getInfoFromSelectedCourse(value)
-              }}>
-              <option value="" disabled >Selecciona un curso</option>
-              {courseList && Array.isArray(courseList) && (
-                courseList.map((course: Course, index: number) => (
-                  <option key={index} value={course.codigo_curso}>
-                    {course.nombre_curso}
-                  </option>
-                ))
-              )}
+              }}
+            >
+
+              {renderCourseOptions()}
             </select>
           </Col>
           <Col sm={12} md={3}>
-            <label htmlFor="seccion" className="form-label">Sección</label>
-            <select name="seccion" id="seccion" className="form-select"
+            <label htmlFor="seccion" className="form-label me-3">Sección</label>
+            {sectionOptionsLoading ? (
+              <Spinner animation="border" role="status" size="sm">
+                <span className="visually-hidden">Loading...</span>
+              </Spinner>
+
+            ) : ('')
+            }
+            <select
+              name="seccion"
+              id="seccion"
+              className="form-select"
+              value={selectedSection || ''}
               onChange={(event) => {
                 const value = event.target.value;
                 getSchedulesForSelectedCourse(value)
                 setSelectedSection(value)
               }}>
-              <option value="" disabled>Selecciona una seccion</option>
-              {Object.entries(sectionList)
-                .sort(([, a], [, b]) => a.numero_seccion - b.numero_seccion)
-                .map(([sectionKey, sectionData]) => (
-                  <option key={sectionKey} value={sectionKey}>
-                    {getSectionLabel(sectionData)}
-                  </option>
-                ))}
-
+              {renderSectionOptions()}
             </select>
           </Col>
         </Row>
@@ -359,6 +410,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
           </Button>
         </Modal.Footer>
       </Modal>
+
     </Container >
 
   )
