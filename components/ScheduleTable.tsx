@@ -13,7 +13,6 @@ type ScheduleData = {
 
 }
 
-
 type SectionData = {
     codigo_seccion: string,
     numero_seccion: number,
@@ -50,7 +49,7 @@ type ScheduleCourse = {
 
 }
 
-type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
+type SetCoursesType = Dispatch<SetStateAction<Course[] | null>>;
 const days: string[] = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"]
 
 const initialscheduleCourses = () => {
@@ -63,7 +62,7 @@ const initialscheduleCourses = () => {
 }; // You can provide an initial value if needed
 
 
-export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { addedCourses: Course[], setAddedCourses: SetCoursesType }) {
+export default function ScheduleTable({ addedCourses = [], setAddedCourses, numberOfCredits }: { addedCourses: Course[] | null, setAddedCourses: SetCoursesType, numberOfCredits: number }) {
 
     const baseColors = [
         "#fbf8cc",
@@ -103,17 +102,20 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { 
     }
 
     useEffect(() => {
+        if (addedCourses == null) {
+            setAvailableColors(baseColors)
+            return
+        }
         addedCourses.forEach(course => {
             const courseName = course.nombre_curso
             if ((courseName in assignedColors)) {
                 return
             }
-
             const courseColor = getAvailableColor()
             assignColorToCourse(courseName, courseColor)
             if (course && course.data) {
                 const sectionNumber = course.data.numero_seccion
-
+                console.log("jijijajaa")
                 course.data.schedules.forEach(schedule => {
                     const day = schedule.dia
                     const startTime = schedule.hora_inicio
@@ -161,14 +163,15 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { 
                 }
             })
         })
-        addedCourses.forEach(course => {
-            if (course.nombre_curso != courseName) {
-                updatedCourses.push(course)
-            }
-        })
-
-        setAddedCourses(updatedCourses)
-        setScheduleCourses(updatedScheduleCourses)
+        if (addedCourses) {
+            addedCourses.forEach(course => {
+                if (course.nombre_curso != courseName) {
+                    updatedCourses.push(course)
+                }
+            })
+            setAddedCourses(updatedCourses)
+            setScheduleCourses(updatedScheduleCourses)
+        }
     }
     const createDeleteCourseButton = (courseName: string) => {
         return (
@@ -219,6 +222,7 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { 
 
     }
 
+
     const createCellsTable = (hour: number) => {
         const hourCells = []
         for (let i = 0; i < 6; i++) {
@@ -257,6 +261,10 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses }: { 
         <Container className="mt-3">
             <Row>
                 <h2 style={{ textAlign: "center" }}>HORARIOS</h2>
+            </Row>
+            <Row className="m-3">
+                <h2>Creditaje: {numberOfCredits}</h2>
+
             </Row>
             <Row>
                 <div style={{ overflowX: "auto" }} id="table-container">

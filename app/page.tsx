@@ -1,5 +1,5 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import CourseForm from '@/components/CourseForm'
 import ScheduleTable from '@/components/ScheduleTable'
 import Container from 'react-bootstrap/Container';
@@ -34,11 +34,20 @@ type Course = {
   data: SectionData | null
 };
 
-const initialCourses: Course[] = []; // You can provide an initial value if needed
 
 export default function Home() {
-  const [addedCourses, setAddedCourses] = useState<Course[]>(initialCourses);
+  const [addedCourses, setAddedCourses] = useState<Course[] | null>(null);
+  const [numberOfCredits, setNumberOfCredits] = useState(0)
   const [showCourseAddedToast, setShowCourseAddedToast] = useState(false)
+  const [showCreditsLimitToast, setShowCreditsLimitToast] = useState(false)
+
+  useEffect(() => {
+    let credits = 0;
+    addedCourses?.forEach(course => {
+      credits += course.creditaje
+    })
+    setNumberOfCredits(credits)
+  }, [addedCourses])
 
 
   return (
@@ -47,10 +56,20 @@ export default function Home() {
         <h1>FISI - Generador de horarios</h1>
       </Row>
       <Row>
-        <CourseForm addedCourses={addedCourses} setAddedCourses={setAddedCourses} setShowCourseAddedToast={setShowCourseAddedToast} />
+        <CourseForm
+          addedCourses={addedCourses}
+          setAddedCourses={setAddedCourses}
+          numberOfCredits={numberOfCredits}
+          setShowCourseAddedToast={setShowCourseAddedToast}
+          setShowCreditsLimitToast={setShowCreditsLimitToast}
+        />
       </Row>
       <Row>
-        <ScheduleTable addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
+
+        <ScheduleTable
+          addedCourses={addedCourses}
+          setAddedCourses={setAddedCourses}
+          numberOfCredits={numberOfCredits} />
       </Row>
       <Row className="mb-3 mt-3 text-center" >
         <a href="https://forms.office.com/r/wfX59SpGqV" className="">¿Encontraste algún bug o quieres realizar una crítica constructiva?</a>
@@ -58,8 +77,13 @@ export default function Home() {
       <ToastContainer
         className="p-3"
         position={'top-end'}
+
         style={{ zIndex: 1 }}>
-        <Toast onClose={() => setShowCourseAddedToast(false)} show={showCourseAddedToast} delay={3000} autohide>
+        <Toast
+          show={showCourseAddedToast}
+          delay={3000} bg={'success'}
+          autohide
+          onClose={() => setShowCourseAddedToast(false)}>
           <Toast.Header>
             <img
               src="holder.js/20x20?text=%20"
@@ -69,6 +93,21 @@ export default function Home() {
             <strong className="me-auto">Felicidades 🤠</strong>
           </Toast.Header>
           <Toast.Body>Curso agregado con éxito</Toast.Body>
+        </Toast>
+        <Toast
+          show={showCreditsLimitToast}
+          delay={3000} bg={'danger'}
+          autohide
+          onClose={() => setShowCreditsLimitToast(false)}>
+          <Toast.Header>
+            <img
+              src="holder.js/20x20?text=%20"
+              className="rounded me-2"
+              alt=""
+            />
+            <strong className="me-auto">Error 🙁</strong>
+          </Toast.Header>
+          <Toast.Body>Límite de créditos permitidos alcanzados</Toast.Body>
         </Toast>
       </ToastContainer>
 

@@ -45,10 +45,10 @@ type Course = {
 type SectionListDict = {
   [key: string]: Schedule;
 }
-type SetCoursesType = Dispatch<SetStateAction<Course[]>>;
+type SetCoursesType = Dispatch<SetStateAction<Course[] | null>>;
 type setToastType = Dispatch<SetStateAction<boolean>>
 
-export default function CourseForm({ addedCourses = [], setAddedCourses, setShowCourseAddedToast }: { addedCourses: Course[], setAddedCourses: SetCoursesType, setShowCourseAddedToast: setToastType },) {
+export default function CourseForm({ addedCourses = [], setAddedCourses, setShowCourseAddedToast, setShowCreditsLimitToast, numberOfCredits }: { addedCourses: Course[] | null, setAddedCourses: SetCoursesType, setShowCourseAddedToast: setToastType, setShowCreditsLimitToast: setToastType, numberOfCredits: number },) {
   const [selectedMajor, setSelectedMajor] = useState<string>('')
   const [selectedSemester, setSelectedSemester] = useState<number | ''>('')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -67,7 +67,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
 
 
   useEffect(() => {
-    setAddedCourses([])
+    setAddedCourses(null)
     setSelectedCourse(null)
     setCourseList([])
     setSelectedSemester('')
@@ -170,6 +170,8 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
 
 
   const isCourseAlreadyAggregated = () => {
+    if (addedCourses == null)
+      return false
     let courseAlreadyAggregated = false
     addedCourses.forEach(courseInList => {
       const courseInListCode = courseInList.codigo_curso;
@@ -214,36 +216,55 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     })
     return conflictExists
   }
+
+
+  const addCourse = () => {
+    if (selectedCourse) {
+      setShowCourseAddedToast(true)
+      setAddedCourses((prevItems) => {
+        if (prevItems == null)
+          return [selectedCourse]
+        return [...prevItems, selectedCourse]
+      });
+    }
+  }
+
   const handleAddButton = () => {
-    if (selectedSection == '') {
+    if (selectedSection == '' || selectedCourse == null) {
       return;
     }
-    if (selectedCourse == null) {
-      return
-    }
+
     if (isCourseAlreadyAggregated()) {
       setShowAddedCourseModal(true)
       return;
     }
+    if (numberOfCredits + selectedCourse.creditaje > 26) {
+      setShowCreditsLimitToast(true)
+      return;
+    }
     const schedulesForSelectedCourse = getSchedulesForSelectedCourse(selectedSection)
-    selectedCourse.data = schedulesOfSelectedCourse
+    selectedCourse.data = schedulesForSelectedCourse
+    if (addedCourses == null) {
+      setAddedCourses([selectedCourse])
+      setShowCourseAddedToast(true)
+      return
+    }
     if (schedulesForSelectedCourse == null)
       return
-    let areScheduleConflicts = false;
+
     addedCourses.forEach((existingCourse) => {
-      areScheduleConflicts = checkConflictBetweenCourses(existingCourse, selectedCourse)
-      if (areScheduleConflicts) {
+      if (checkConflictBetweenCourses(existingCourse, selectedCourse)) {
         setConflictedCourse(existingCourse.nombre_curso)
         setShowConflictCourseModal(true)
         return
       }
     });
 
-    if (!areScheduleConflicts) {
-      setShowCourseAddedToast(true)
-      setAddedCourses((prevItems) => [...prevItems, selectedCourse]);
-    }
+    addCourse()
+
   };
+
+
   const renderSemesterOptions = () => {
     const options = [];
     const numberOfSemesters = 10;
@@ -260,11 +281,11 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
 
   const renderCourseOptions = () => {
     const options = [];
-    options.push(<option value="" key="default" disabled >Selecciona un curso</option>)
+    options.push(<option value="" key="default-course" disabled >Selecciona un curso</option>)
     if (courseList.length > 0) {
       courseList.map((course: Course, index: number) => (
         options.push(
-          <option key={index} value={course.codigo_curso}>
+          <option key={course.nombre_curso + index} value={course.codigo_curso}>
             {course.nombre_curso}
           </option>
         )
@@ -276,7 +297,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
 
   const renderSectionOptions = () => {
     const options = [];
-    options.push(<option value="" disabled defaultChecked>Selecciona una sección</option>)
+    options.push(<option value="" key={"default-section"} disabled defaultChecked>Selecciona una sección</option>)
     {
       Object.entries(sectionList)
         .sort(([, a], [, b]) => a.numero_seccion - b.numero_seccion)
