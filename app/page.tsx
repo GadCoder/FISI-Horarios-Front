@@ -3,7 +3,9 @@ import { useState, useEffect } from "react"
 import CourseForm from '@/components/CourseForm'
 import ScheduleTable from '@/components/ScheduleTable'
 
-
+import Container from 'react-bootstrap/Container';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
 
 type ScheduleData = {
   dia: string,
@@ -38,16 +40,19 @@ export default function Home() {
   const [addedCourses, setAddedCourses] = useState<Course[]>(initialCourses);
 
   return (
-    <div className="container">
-      <div className="row">
+    <Container>
+      <Row>
         <h1>FISI - Generador de horarios</h1>
-      </div>
-      <div className='row'>
+      </Row>
+      <Row>
         <CourseForm addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
-      </div>
-      <div className='row'>
+      </Row>
+      <Row>
         <ScheduleTable addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
-      </div>
-    </div >
+      </Row>
+      <Row className="mb-3 mt-3 text-center" >
+        <a href="https://forms.office.com/Pages/DesignPageV2.aspx?prevorigin=Marketing&origin=NeoPortalPage&subpage=design&id=eZp7cZEbq0Gm96V5tGqbQZDt-8Umy9pIlhIDOBJ2iK5UQ0xCSTE3QkhIVTk2RDExMktQM0hRWEhTWi4u">¿Encontraste algún bug o quieres realizar una crítica constructiva?</a>
+      </Row>
+    </Container>
   )
 }
