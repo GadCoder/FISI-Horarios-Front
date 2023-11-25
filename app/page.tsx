@@ -51,7 +51,7 @@ export default function Home() {
         <ScheduleTable addedCourses={addedCourses} setAddedCourses={setAddedCourses} />
       </Row>
       <Row className="mb-3 mt-3 text-center" >
-        <a href="https://forms.office.com/r/wfX59SpGqV">¿Encontraste algún bug o quieres realizar una crítica constructiva?</a>
+        <a href="https://forms.office.com/r/wfX59SpGqV" className="link">¿Encontraste algún bug o quieres realizar una crítica constructiva?</a>
       </Row>
     </Container>
   )
