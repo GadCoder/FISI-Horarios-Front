@@ -126,6 +126,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
     const sectionListValues = Object.entries(sectionList)
     if (sectionListValues.length > 0) {
       const [firstKey, firstValue] = sectionListValues[0];
+      console.log("First key: " + firstKey)
       setSelectedSection(firstKey)
       getSchedulesForSelectedCourse(firstKey)
     }
@@ -183,15 +184,25 @@ export default function CourseForm({ addedCourses = [], setAddedCourses }: { add
   }
 
   const areConflictBetweenSchedules = (existingCourseSchedule: ScheduleData, selectedCourseSchedule: ScheduleData) => {
-    if (existingCourseSchedule.dia != selectedCourseSchedule.dia)
-      return false
-    for (let i = existingCourseSchedule.hora_fin; i <= existingCourseSchedule.hora_inicio; i++) {
-      const selectedCourseStartTime = selectedCourseSchedule.hora_fin
-      const selectedCourseEndTime = selectedCourseSchedule.hora_inicio
-      if (i >= selectedCourseStartTime && i <= selectedCourseEndTime)
-        return false
-    }
-    return true
+    let conflictExists = false
+    const existingCourseDay = existingCourseSchedule.dia;
+    const selectedCourseDay = selectedCourseSchedule.dia
+    if (existingCourseDay != selectedCourseDay)
+      conflictExists = false
+
+    const existingCourseStartTime = existingCourseSchedule.hora_inicio;
+    const existingCourseEndTime = existingCourseSchedule.hora_fin
+    const selectedCourseStartTime = existingCourseSchedule.hora_inicio;
+    const selectedCourseEndTime = existingCourseSchedule.hora_fin
+    const selectedCourseDuration = selectedCourseEndTime - selectedCourseStartTime;
+
+    if (selectedCourseStartTime == existingCourseEndTime)
+      conflictExists = false
+
+    if (selectedCourseStartTime >= existingCourseStartTime && selectedCourseStartTime + selectedCourseDuration < existingCourseEndTime)
+      conflictExists = true
+    return conflictExists
+
 
   }
 
