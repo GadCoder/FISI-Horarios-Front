@@ -78,6 +78,7 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
     ]
 
     const [availableColors, setAvailableColors] = useState(baseColors)
+    const [areCoursesAdded, setAreCoursesAdded] = useState(false)
     const [assignedColors, setAssignedColors] = useState<AssignedColor>({})
 
     const hours = Array.from({ length: 14 }, (_, index) => index + 8);
@@ -102,10 +103,14 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
     }
 
     useEffect(() => {
+
         if (addedCourses == null) {
             setAvailableColors(baseColors)
+            setAreCoursesAdded(true)
             return
         }
+
+        setAreCoursesAdded(true)
         addedCourses.forEach(course => {
             const courseName = course.nombre_curso
             if ((courseName in assignedColors)) {
@@ -115,7 +120,6 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
             assignColorToCourse(courseName, courseColor)
             if (course && course.data) {
                 const sectionNumber = course.data.numero_seccion
-                console.log("jijijajaa")
                 course.data.schedules.forEach(schedule => {
                     const day = schedule.dia
                     const startTime = schedule.hora_inicio
@@ -185,11 +189,11 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
         )
 
     }
-    const createCourseCell = (name: string, sectionNumber: number, duration: number, key: string) => {
+    const createCourseCell = (name: string, sectionNumber: number, duration: number) => {
         const cellText = `${name} G.${sectionNumber}`
         const cellBackgroundColor = assignedColors[name]
 
-        return <td rowSpan={duration} key={key} style={{
+        return <td rowSpan={duration} key={name} style={{
             backgroundColor: cellBackgroundColor,
             whiteSpace: 'pre-wrap',
             wordWrap: 'break-word',
@@ -218,10 +222,20 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
 
 
     const createHourCell = (hour: number) => {
-        return <td className="text-center">{`${hour}:00-${hour + 1}:00`}</td>
+        return <td className="text-center" key={`${hour}-${hour + 1}`}>{`${hour}:00-${hour + 1}:00`}</td>
 
     }
 
+
+    const createEmptyCellsTable = (hour: number) => {
+        const hourCells = []
+        for (let i = 0; i < 6; i++) {
+            const day = days[i]
+            const emptyCell = createEmptyCell(hour + day)
+            hourCells.push(emptyCell)
+        }
+        return hourCells
+    }
 
     const createCellsTable = (hour: number) => {
         const hourCells = []
@@ -231,7 +245,7 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
             let skipCell = false
             scheduleCourses[day].map(course => {
                 if (course.startTime == hour) {
-                    const courseCell = createCourseCell(course.name, course.sectionNumber, course.duration, hour + day)
+                    const courseCell = createCourseCell(course.name, course.sectionNumber, course.duration)
                     hourCells.push(courseCell)
                     courseAssigned = true
                 } else {
@@ -283,7 +297,7 @@ export default function ScheduleTable({ addedCourses = [], setAddedCourses, numb
                             {hours.map((hour, hourIndex) => (
                                 <tr key={hourIndex}>
                                     {createHourCell(hour)}
-                                    {createCellsTable(hour)}
+                                    {addedCourses == null ? createEmptyCellsTable(hour) : createCellsTable(hour)}
 
                                 </tr>
                             ))}

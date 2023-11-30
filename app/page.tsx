@@ -105,7 +105,7 @@ export default function Home() {
               className="rounded me-2"
               alt=""
             />
-            <strong className="me-auto">Error 🙁</strong>
+            <strong className="me-auto">Upps 🙁</strong>
           </Toast.Header>
           <Toast.Body>Límite de créditos permitidos alcanzados</Toast.Body>
         </Toast>

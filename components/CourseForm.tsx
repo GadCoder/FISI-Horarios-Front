@@ -186,21 +186,26 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     const existingCourseDay = existingCourseSchedule.dia;
     const selectedCourseDay = selectedCourseSchedule.dia
     if (existingCourseDay != selectedCourseDay)
-      conflictExists = false
+      return false
 
     const existingCourseStartTime = existingCourseSchedule.hora_inicio;
     const existingCourseEndTime = existingCourseSchedule.hora_fin
-    const selectedCourseStartTime = existingCourseSchedule.hora_inicio;
-    const selectedCourseEndTime = existingCourseSchedule.hora_fin
+    const selectedCourseStartTime = selectedCourseSchedule.hora_inicio;
+    const selectedCourseEndTime = selectedCourseSchedule.hora_fin
     const selectedCourseDuration = selectedCourseEndTime - selectedCourseStartTime;
 
-    if (selectedCourseStartTime == existingCourseEndTime)
+    if (selectedCourseStartTime >= existingCourseEndTime)
       conflictExists = false
+
+
+    if (selectedCourseStartTime == existingCourseStartTime)
+      conflictExists = true
 
     if (selectedCourseStartTime >= existingCourseStartTime && selectedCourseStartTime + selectedCourseDuration < existingCourseEndTime)
       conflictExists = true
-    return conflictExists
 
+
+    return conflictExists
 
   }
 
@@ -212,6 +217,8 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     existingCourseSchedules?.forEach(existingCourseSchedule => {
       selectedCourseSchedules?.forEach(selectedCourseSchedule => {
         conflictExists = areConflictBetweenSchedules(existingCourseSchedule, selectedCourseSchedule)
+        if (conflictExists)
+          return true
       })
     })
     return conflictExists
@@ -230,6 +237,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
   }
 
   const handleAddButton = () => {
+
     if (selectedSection == '' || selectedCourse == null) {
       return;
     }
@@ -247,20 +255,25 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     if (addedCourses == null) {
       setAddedCourses([selectedCourse])
       setShowCourseAddedToast(true)
-      return
+      return;
     }
     if (schedulesForSelectedCourse == null)
-      return
+      return;
 
+    let canAddCourse = true
     addedCourses.forEach((existingCourse) => {
+      console.log("CHECKING CONFLICT")
       if (checkConflictBetweenCourses(existingCourse, selectedCourse)) {
+        console.log("CONFLICT")
         setConflictedCourse(existingCourse.nombre_curso)
         setShowConflictCourseModal(true)
-        return
+        canAddCourse = false
       }
     });
 
-    addCourse()
+    console.log("CONFLICT OUT")
+    if (canAddCourse)
+      addCourse()
 
   };
 
@@ -407,7 +420,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
       </Row>
       <Modal show={showAddedCourseModal} onHide={() => setShowAddedCourseModal(false)} >
         <Modal.Header closeButton>
-          <Modal.Title>Error :(</Modal.Title>
+          <Modal.Title>Upps :(</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           Curso ya agregado
@@ -420,7 +433,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
       </Modal>
       <Modal show={showConflictCourseModal} onHide={() => setShowConflictCourseModal(false)} >
         <Modal.Header closeButton>
-          <Modal.Title>Error :(</Modal.Title>
+          <Modal.Title>Upps :(</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           El curso que deseas agregar presenta cruce de horarios con <b>{conflictedCourse}</b>
