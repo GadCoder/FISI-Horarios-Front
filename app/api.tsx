@@ -1,11 +1,11 @@
 
 
-const baseUrl = "https://generador-horarios-quiet-dawn-4208.fly.dev"
+const baseUrl = "http://127.0.0.1:8000"
 
-export const getCoursesFromSemester = async (major: string, semester: number) => {
+export const getCoursesFromSemester = async (plan: string, major: string, semester: number) => {
     try {
 
-        const request = await fetch(`${baseUrl}/cursos/get-from-ciclo/${major}/${semester}`);
+        const request = await fetch(`${baseUrl}/cursos/get-from-ciclo/${plan}/${major}/${semester}`);
         const result = await request.json();
         return result
     }
@@ -16,9 +16,9 @@ export const getCoursesFromSemester = async (major: string, semester: number) =>
 
 }
 
-export const getSectionsFromCourse = async (courseCode: string) => {
+export const getSectionsFromCourse = async (plan: string, courseCode: string) => {
     try {
-        const request = await fetch(`${baseUrl}/secciones/get-secciones-from-curso/${courseCode}`);
+        const request = await fetch(`${baseUrl}/secciones/get-secciones-from-curso/${plan}/${courseCode}`);
         const result = await request.json();
         return result
     } catch (error) {
@@ -29,9 +29,9 @@ export const getSectionsFromCourse = async (courseCode: string) => {
 }
 
 
-export const getSchedulesFromSection = async (major: string, sectionCode: string) => {
+export const getSchedulesFromSection = async (plan: string, major: string, sectionCode: string) => {
     try {
-        const res = await fetch(`${baseUrl}/horario-seccion/get-horarios-from-seccion/${major}/${sectionCode}`);
+        const res = await fetch(`${baseUrl}/horario-seccion/get-horarios-from-seccion/${plan}/${major}/${sectionCode}`);
         const result = await res.json();
         return result.horarios
     } catch (error) {

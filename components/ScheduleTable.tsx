@@ -60,7 +60,7 @@ const initialscheduleCourses = () => {
     initialScheduleCourse[day] = [];
   });
   return initialScheduleCourse;
-}; // You can provide an initial value if needed
+};
 
 export default function ScheduleTable({
   addedCourses = [],
@@ -89,7 +89,7 @@ export default function ScheduleTable({
   const [availableColors, setAvailableColors] = useState(baseColors);
   const [areCoursesAdded, setAreCoursesAdded] = useState(false);
   const [assignedColors, setAssignedColors] = useState<AssignedColor>({});
-
+  const [forceUpdateFlag, setForceUpdateFlag] = useState(false);
   const hours = Array.from({ length: 14 }, (_, index) => index + 8);
   const [scheduleCourses, setScheduleCourses] = useState<ScheduleCourseList>(
     initialscheduleCourses
@@ -116,6 +116,8 @@ export default function ScheduleTable({
     if (addedCourses == null) {
       setAvailableColors(baseColors);
       setAreCoursesAdded(true);
+      setForceUpdateFlag(prevFlag => !prevFlag); // Toggle the flag to force a re-render
+      setScheduleCourses(initialscheduleCourses)
       return;
     }
 
@@ -224,9 +226,8 @@ export default function ScheduleTable({
 
   const createHourCell = (hour: number) => {
     return (
-      <td className="text-center" key={`${hour}-${hour + 1}`}>{`${hour}:00-${
-        hour + 1
-      }:00`}</td>
+      <td className="text-center" key={`${hour}-${hour + 1}`}>{`${hour}:00-${hour + 1
+        }:00`}</td>
     );
   };
 
@@ -300,7 +301,7 @@ export default function ScheduleTable({
             </thead>
             <tbody>
               {hours.map((hour, hourIndex) => (
-                <tr key={hourIndex}>
+                <tr key={hourIndex + "-" + hour}>
                   {createHourCell(hour)}
                   {addedCourses == null
                     ? createEmptyCellsTable(hour)

@@ -46,6 +46,8 @@ export default function Home() {
       credits += course.creditaje;
     });
     setNumberOfCredits(credits);
+    console.log("Added courses: ")
+    console.log(addedCourses)
   }, [addedCourses]);
 
   return (
@@ -75,11 +77,7 @@ export default function Home() {
           pageTheme={theme}
         />
       </Row>
-      <Row className="mb-3 mt-3 text-center">
-        <a href="https://forms.office.com/r/wfX59SpGqV" className="">
-          ¿Encontraste algún bug o quieres realizar una crítica constructiva?
-        </a>
-      </Row>
+
       <ToastContainer
         className="p-3"
         position={"top-end"}

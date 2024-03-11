@@ -49,6 +49,7 @@ type SetCoursesType = Dispatch<SetStateAction<Course[] | null>>;
 type setToastType = Dispatch<SetStateAction<boolean>>
 
 export default function CourseForm({ addedCourses = [], setAddedCourses, setShowCourseAddedToast, setShowCreditsLimitToast, numberOfCredits }: { addedCourses: Course[] | null, setAddedCourses: SetCoursesType, setShowCourseAddedToast: setToastType, setShowCreditsLimitToast: setToastType, numberOfCredits: number },) {
+  const [selectedPlan, setSelectedPlan] = useState<string>('')
   const [selectedMajor, setSelectedMajor] = useState<string>('')
   const [selectedSemester, setSelectedSemester] = useState<number | ''>('')
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
@@ -72,13 +73,22 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     setCourseList([])
     setSelectedSemester('')
     setSelectedSection('')
+  }, [selectedPlan])
+
+
+  useEffect(() => {
+    setAddedCourses(null)
+    setSelectedCourse(null)
+    setCourseList([])
+    setSelectedSemester('')
+    setSelectedSection('')
   }, [selectedMajor])
 
   useEffect(() => {
     if (selectedSemester != '') {
       setCourseOptionsLoading(true)
       const fetchData = async () => {
-        const coursesFromSemester = await getCoursesFromSemester(selectedMajor, selectedSemester)
+        const coursesFromSemester = await getCoursesFromSemester(selectedPlan, selectedMajor, selectedSemester)
         if (coursesFromSemester != null) {
           setSelectedCourse(coursesFromSemester[0])
           setCourseList(coursesFromSemester)
@@ -97,7 +107,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
     setSectionOptionsLoading(true)
     const fetchData = async () => {
 
-      const sectionsFromCourse = await getSectionsFromCourse(selectedCourse?.codigo_curso)
+      const sectionsFromCourse = await getSectionsFromCourse(selectedPlan, selectedCourse?.codigo_curso)
       const sections: SectionListDict = {}
       await Promise.all(sectionsFromCourse.map(async (section: SectionData) => {
         const sectionSchedule: Schedule = {
@@ -154,7 +164,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
   }
 
   const getSectionSchedule = async (sectionCode: string) => {
-    const schedulesFromSection = await getSchedulesFromSection(selectedMajor, sectionCode)
+    const schedulesFromSection = await getSchedulesFromSection(selectedPlan, selectedMajor, sectionCode)
     return schedulesFromSection
 
   };
@@ -331,6 +341,20 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
       <form>
         <Row className="mb-3">
           <Col sm={12} md={3}>
+            <label htmlFor="plan-estudios" className="form-label">Plan de estudios</label>
+            <select name="plan-estudios" id="plan-estudios" className="form-select" value={selectedPlan}
+              onChange={(event) => {
+                const value = event.target.value;
+                setSelectedPlan(value);
+              }}>
+              <option value="" disabled defaultChecked>
+                Selecciona un plan de estudios
+              </option>
+              <option value="2018">2018</option>
+              <option value="2023">2023</option>
+            </select>
+          </Col>
+          <Col sm={12} md={3}>
             <label htmlFor="carrera" className="form-label">Carrera</label>
             <select name="carrera" id="carrera" className="form-select" value={selectedMajor}
               onChange={(event) => {
@@ -341,7 +365,7 @@ export default function CourseForm({ addedCourses = [], setAddedCourses, setShow
                 Selecciona una carrera
               </option>
               <option value="SOFTWARE">Ingeniería de Software</option>
-              <option value="SISTEMAS">Ingeniería de Sistemas</option>
+              <option value="SISTEMAS" disabled={selectedPlan == "2018"}>Ingeniería de Sistemas</option>
             </select>
           </Col>
           <Col sm={12} md={3}>
