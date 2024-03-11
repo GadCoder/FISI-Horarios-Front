@@ -1,6 +1,6 @@
 
 
-const baseUrl = https://fisi-horarios-api.onrender.com"
+const baseUrl = "https://fisi-horarios-api.onrender.com"
 
 export const getCoursesFromSemester = async (plan: string, major: string, semester: number) => {
     try {
