@@ -1,6 +1,6 @@
 
 
-const baseUrl = "http://127.0.0.1:8000"
+const baseUrl = https://fisi-horarios-api.onrender.com"
 
 export const getCoursesFromSemester = async (plan: string, major: string, semester: number) => {
     try {
