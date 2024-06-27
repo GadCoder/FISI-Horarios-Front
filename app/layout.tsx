@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "./globals.css";
+import "@/web/styles/globals.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { cookies } from "next/headers";
 import dynamic from "next/dynamic";
 
 const DynamicBootstrap = dynamic(
-  () => require("bootstrap/dist/js/bootstrap.min.js"),
+  () => import("bootstrap/dist/js/bootstrap.min.js"),
   { ssr: false }
 );
 

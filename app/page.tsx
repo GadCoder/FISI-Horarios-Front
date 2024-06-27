@@ -1,12 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
-import CourseForm from "@/components/CourseForm";
-import ScheduleTable from "@/components/ScheduleTable";
+import CourseForm from "@/web/components/CourseForm";
+import ScheduleTable from "@/web/components/ScheduleTable";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Toast from "react-bootstrap/Toast";
 import ToastContainer from "react-bootstrap/ToastContainer";
-import ThemeToggle from "@/components/ThemeToggle";
+import ThemeToggle from "@/web/components/ThemeToggle";
 import { Col } from "react-bootstrap";
 
 type ScheduleData = {
@@ -46,8 +46,7 @@ export default function Home() {
       credits += course.creditaje;
     });
     setNumberOfCredits(credits);
-    console.log("Added courses: ")
-    console.log(addedCourses)
+    console.log("Added courses: ", addedCourses);
   }, [addedCourses]);
 
   return (
