@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import "@/src/web/styles/globals.css";
+import "@src/web/styles/globals.css";
 import "bootstrap/dist/css/bootstrap.css";
 import { cookies } from "next/headers";
 import dynamic from "next/dynamic";
