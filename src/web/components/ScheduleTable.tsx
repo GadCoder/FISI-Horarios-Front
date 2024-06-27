@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Dispatch, SetStateAction } from "react";
 import { Button } from "react-bootstrap";
-
+import { FaTrash } from "react-icons/fa";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 
@@ -36,6 +36,7 @@ type AssignedColor = {
 type ScheduleCourseList = {
   [key: string]: ScheduleCourse[];
 };
+
 type ScheduleCourse = {
   name: string;
   sectionNumber: number;
@@ -116,8 +117,8 @@ export default function ScheduleTable({
     if (addedCourses == null) {
       setAvailableColors(baseColors);
       setAreCoursesAdded(true);
-      setForceUpdateFlag(prevFlag => !prevFlag); // Toggle the flag to force a re-render
-      setScheduleCourses(initialscheduleCourses)
+      setForceUpdateFlag((prevFlag) => !prevFlag);
+      setScheduleCourses(initialscheduleCourses);
       return;
     }
 
@@ -179,13 +180,19 @@ export default function ScheduleTable({
       setScheduleCourses(updatedScheduleCourses);
     }
   };
+
   const createDeleteCourseButton = (courseName: string) => {
     return (
-      <Button variant="danger" onClick={() => handleDeleteButton(courseName)}>
-        Eliminar curso
+      <Button
+        variant="danger"
+        onClick={() => handleDeleteButton(courseName)}
+        style={{ alignItems: "center" }}
+      >
+        <FaTrash style={{ marginRight: "5px" }} />
       </Button>
     );
   };
+
   const createCourseCell = (
     name: string,
     sectionNumber: number,
@@ -198,6 +205,8 @@ export default function ScheduleTable({
         rowSpan={duration}
         key={name}
         style={{
+          fontSize: "14px",
+          alignContent: "center",
           backgroundColor: cellBackgroundColor,
           color: "black",
           whiteSpace: "pre-wrap",
@@ -208,10 +217,11 @@ export default function ScheduleTable({
         <div className="row mb-3" style={{ textAlign: "center" }}>
           <span>{cellText}</span>
         </div>
-        <div className="row ">{createDeleteCourseButton(name)}</div>
+        <div className="row">{createDeleteCourseButton(name)}</div>
       </td>
     );
   };
+
   const createEmptyCell = (key: string) => {
     return (
       <td
@@ -226,8 +236,9 @@ export default function ScheduleTable({
 
   const createHourCell = (hour: number) => {
     return (
-      <td className="text-center" key={`${hour}-${hour + 1}`}>{`${hour}:00-${hour + 1
-        }:00`}</td>
+      <td className="text-center" key={`${hour}-${hour + 1}`}>
+        {`${hour}:00-${hour + 1}:00`}
+      </td>
     );
   };
 
@@ -287,8 +298,15 @@ export default function ScheduleTable({
         <h2>Creditaje: {numberOfCredits}</h2>
       </Row>
       <Row>
-      <div style={{ overflowX: "auto", maxWidth: "100%", marginTop: "20px" }} id="table-container">
-        <table className="table table-bordered" ref={tableRef} style={{ tableLayout: "fixed" }}>
+        <div
+          style={{ overflowX: "auto", maxWidth: "100%", marginTop: "20px" }}
+          id="table-container"
+        >
+          <table
+            className="table table-bordered"
+            ref={tableRef}
+            style={{ tableLayout: "fixed"}}
+          >
             <thead>
               <tr>
                 <th className="text-center">HORA</th>
