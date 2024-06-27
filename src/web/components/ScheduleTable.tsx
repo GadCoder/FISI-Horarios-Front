@@ -287,8 +287,8 @@ export default function ScheduleTable({
         <h2>Creditaje: {numberOfCredits}</h2>
       </Row>
       <Row>
-        <div style={{ overflowX: "auto" }} id="table-container">
-          <table className="table table-bordered" ref={tableRef}>
+      <div style={{ overflowX: "auto", maxWidth: "100%", marginTop: "20px" }} id="table-container">
+        <table className="table table-bordered" ref={tableRef} style={{ tableLayout: "fixed" }}>
             <thead>
               <tr>
                 <th className="text-center">HORA</th>
