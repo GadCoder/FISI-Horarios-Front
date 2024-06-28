@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { Dispatch, SetStateAction } from "react";
-import { Button } from "react-bootstrap";
+import { Button, Col } from "react-bootstrap";
 import { FaTrash } from "react-icons/fa";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
+import CourseCell from "./CourseCell";
+import html2canvas from "html2canvas";
 
 type ScheduleData = {
   dia: string;
@@ -91,6 +93,7 @@ export default function ScheduleTable({
   const [areCoursesAdded, setAreCoursesAdded] = useState(false);
   const [assignedColors, setAssignedColors] = useState<AssignedColor>({});
   const [forceUpdateFlag, setForceUpdateFlag] = useState(false);
+  const [areDeleteButtonsVisible, setAreDeleteButtonsVisible] = useState(true);
   const hours = Array.from({ length: 14 }, (_, index) => index + 8);
   const [scheduleCourses, setScheduleCourses] = useState<ScheduleCourseList>(
     initialscheduleCourses
@@ -149,6 +152,24 @@ export default function ScheduleTable({
     });
   }, [addedCourses]);
 
+  const exportSchedule = () => {
+    setAreDeleteButtonsVisible(false);
+  };
+
+  useEffect(() => {
+    if (!areDeleteButtonsVisible) {
+      const table = document.getElementById("schedule-table") as HTMLElement;
+      html2canvas(table).then((canvas) => {
+        const imgData = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.href = imgData;
+        link.download = "table.png";
+        link.click();
+      });
+      setAreDeleteButtonsVisible(true);
+    }
+  }, [areDeleteButtonsVisible]);
+
   const deleteCourseFromAssignedColors = (courseName: string) => {
     const assignedColor = assignedColors[courseName];
     const updatedAssignedColors = Object.fromEntries(
@@ -179,47 +200,6 @@ export default function ScheduleTable({
       setAddedCourses(updatedCourses);
       setScheduleCourses(updatedScheduleCourses);
     }
-  };
-
-  const createDeleteCourseButton = (courseName: string) => {
-    return (
-      <Button
-        variant="danger"
-        onClick={() => handleDeleteButton(courseName)}
-        style={{ alignItems: "center" }}
-      >
-        <FaTrash style={{ marginRight: "5px" }} />
-      </Button>
-    );
-  };
-
-  const createCourseCell = (
-    name: string,
-    sectionNumber: number,
-    duration: number
-  ) => {
-    const cellText = `${name} G.${sectionNumber}`;
-    const cellBackgroundColor = assignedColors[name];
-    return (
-      <td
-        rowSpan={duration}
-        key={name}
-        style={{
-          fontSize: "14px",
-          alignContent: "center",
-          backgroundColor: cellBackgroundColor,
-          color: "black",
-          whiteSpace: "pre-wrap",
-          wordWrap: "break-word",
-          padding: "3em",
-        }}
-      >
-        <div className="row mb-3" style={{ textAlign: "center" }}>
-          <span>{cellText}</span>
-        </div>
-        <div className="row">{createDeleteCourseButton(name)}</div>
-      </td>
-    );
   };
 
   const createEmptyCell = (key: string) => {
@@ -260,10 +240,15 @@ export default function ScheduleTable({
       let skipCell = false;
       scheduleCourses[day].map((course) => {
         if (course.startTime == hour) {
-          const courseCell = createCourseCell(
-            course.name,
-            course.sectionNumber,
-            course.duration
+          const courseCell = (
+            <CourseCell
+              name={course.name}
+              sectionNumber={course.sectionNumber}
+              duration={course.duration}
+              assignedColors={assignedColors}
+              onDelete={handleDeleteButton}
+              isDeleteButtonVisible={areDeleteButtonsVisible}
+            />
           );
           hourCells.push(courseCell);
           courseAssigned = true;
@@ -290,12 +275,16 @@ export default function ScheduleTable({
   };
 
   return (
-    <Container className="mt-3">
-      <Row>
-        <h2 style={{ textAlign: "center" }}>HORARIOS</h2>
-      </Row>
-      <Row className="m-3">
-        <h2>Creditaje: {numberOfCredits}</h2>
+    <Container className="mt-4">
+      <Row className="d-flex justify-content-between">
+        <Col md={6}>
+          <h2>Creditaje: {numberOfCredits}</h2>
+        </Col>
+        <Col md={6} className="d-flex justify-content-end">
+          <Button variant="success" onClick={exportSchedule}>
+            Exportar horario
+          </Button>
+        </Col>
       </Row>
       <Row>
         <div
@@ -304,8 +293,9 @@ export default function ScheduleTable({
         >
           <table
             className="table table-bordered"
+            id="schedule-table"
             ref={tableRef}
-            style={{ tableLayout: "fixed"}}
+            style={{ tableLayout: "fixed" }}
           >
             <thead>
               <tr>
