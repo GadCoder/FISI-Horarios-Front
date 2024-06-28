@@ -1,6 +1,6 @@
 
 
-const baseUrl = "https://fisi-horarios.gadsw.dev"
+const baseUrl = "https://fisi-horarios-api.gadsw.dev"
 
 export const getCoursesFromSemester = async (plan: string, major: string, semester: number) => {
     try {
