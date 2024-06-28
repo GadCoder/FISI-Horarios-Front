@@ -479,7 +479,7 @@ export default function CourseForm({
           </Col>
         </Row>
       </form>
-      <Row className="mb-3 mt-4 d-flex justify-content-center ">
+      <Row className="mt-4 d-flex justify-content-center ">
         <Button
           variant="primary"
           onClick={handleAddButton}
